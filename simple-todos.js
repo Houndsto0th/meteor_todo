@@ -3,7 +3,18 @@ Tasks = new Mongo.Collection("tasks");
 if (Meteor.isClient) {
   Template.body.helpers({
     tasks: function () {
-      return Tasks.find({}, {sort: {createdAt: -1}});
+      if (Session.get("hideCompleted")) {
+        return Tasks.find({checked: {$ne: true}}, {sort: {createdAt: -1}});
+      } else {
+        return Tasks.find({}, {sort: {createdAt: -1}});
+      }
+    },
+    hideCompleted: function () {
+      return Session.get("hideCompleted");
+
+    },
+    incompleteCount: function () {
+      return Tasks.find({checked: {$ne: true}}).count();
     }
   });
 
@@ -12,7 +23,9 @@ if (Meteor.isClient) {
       var text = event.target.text.value;
       Tasks.insert({
         text: text,
-        createdAt: new Date()
+        createdAt: new Date(),
+        owner: Meteor.userId(),
+        username: Meteor.user().username
       });
 
       event.target.text.value = "";
@@ -26,8 +39,15 @@ if (Meteor.isClient) {
 
     "click .delete": function () {
       Tasks.remove(this._id);
+    },
 
+    "change .hide-completed": function () {
+        Session.set("hideCompleted", event.target.checked)
     }
 
+  });
+
+  Accounts.ui.config({
+    passwordSignupFields: "USERNAME_ONLY"
   });
 }
